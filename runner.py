@@ -55,16 +55,54 @@ def calc_metric(account: Account, metric_name: str) -> float:
 	return 0
 
 
-def prime_allocator(trades: List[Trade],
-	accounts: Dict[str, Account], constraints: Dict[str, float]):
-	_accounts = []
+def constraints_satisfied(account: Account, constraints: Dict[str, Tuple[float, str]]) -> bool:
+	for metric_name, (limit, gator) in constraints.items():
+		M = calc_metric(account, metric_name)
+		if gator == 'less_than_or_equal' and M > limit:
+			return False
+		if gator == 'greater_than_or_equal' and M < limit:
+			return False
+
+	return True
+
+
+def prime_allocator(
+	trades: List[Trade],
+	accounts: Dict[str, Account], 
+	constraints: Dict[str, float]):
+	
+	allocation_log = []
 	list.sort(trades, key=lambda t: abs(t.quantity * t.price), reverse=True)
+
 	for trade in trades:
 		print('for trade: ', trade)
+		alloc_id, _M = None, float('-inf')
+
 		for account_id, account in accounts.items():
 			_account = deepcopy(account)
 			model_trade(_account, trade)
-			print(metric_summ(_account, account.metrics))
+
+			# ensure that constraints are met before bothering with downstream calc
+			# contract must be fufilled
+			if constraints_satisfied(_account, constraints):
+				M = metric_summ(_account, account.metrics)
+				print('Σ: ', M) # optimize for larger score currently, need to expand scenario
+				if M > _M:
+					_M = M
+					alloc_id = account_id
+		# post termination clause
+			# allocate the modeled trade scenarios to the greedy-optimal account
+		if alloc_id is not None:
+			model_trade(accounts[alloc_id], trade)
+			allocation_log.append((trade, alloc_id))
+		else:
+			raise ValueError(f"Unable to allocate: {trade}")
+
+	if allocation_log:
+		for allocation in allocation_log:
+			print(f'Trade: {allocation[0]} was allocated to {allocation[1]}')
+	else:
+		print('No trades were allocated')
 
 
 		
