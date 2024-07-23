@@ -11,7 +11,7 @@ class Account:
 	cash: Dict[str, float]
 	metrics: Dict[str, float]
 	prices: Dict[str, float] # added to record last trade price
-
+	financing_rate: float # added for interest optimization.
 
 @dataclass
 class Trade:
@@ -43,17 +43,38 @@ def metric_summ(account: Account, metrics: str) -> float:
 
 def calc_metric(account: Account, metric_name: str) -> float:
 	if metric_name == 'total_value':
-		return sum(pos * 100 for pos in account.positions.values()) + sum(account.cash.values())
+		return sum(account.positions[pos] * account.prices[pos] for pos in account.positions) + sum(account.cash.values())
 
 	elif metric_name == 'position_count':
 		return len(account.positions)
 
 	elif metric_name == 'cash_percentage':
-		total_value = sum(pos * 100 for pos in account.positions.values()) + sum(account.cash.values())
+		total_value = calc_metric(account, 'total_value')
 		return (sum(account.cash.values()) / total_value) * 100 if total_value else 0
+
+	elif metric_name == 'leverage':
+		total_asset_value = calc_metric(account, 'total_value')
+		total_liabilities = sum(
+			max(0, -quantity * account.prices[pos] * account.financing_rate)
+			for pos, quantity in account.positions.items())
+		return total_liabilities / total_asset_value if total_asset_value else 0
+
+	elif metric_name == 'financing_cost':
+		return sum(
+			max(0, quantity) * account.prices[pos] * account.financing_rate
+			for pos, quantity in account.positions.items())
 
 	return 0
 
+
+def calc_all_metrics(account: Account) -> Dict[str, float]:
+	return {
+		'total_value': calc_metric(account, 'total_value'),
+		'position_count': calc_metric(account, 'position_count'),
+		'cash_percentage': calc_metric(account, 'cash_percentage'),
+		'leverage': calc_metric(account, 'leverage'),
+		'financing_cost': calc_metric(account, 'financing_cost')
+	} 
 
 def constraints_satisfied(account: Account, constraints: Dict[str, Tuple[float, str]]) -> bool:
 	for metric_name, (limit, gator) in constraints.items():
@@ -75,7 +96,7 @@ def prime_allocator(
 	list.sort(trades, key=lambda t: abs(t.quantity * t.price), reverse=True)
 
 	for trade in trades:
-		print('for trade: ', trade)
+		# print('for trade: ', trade)
 		alloc_id, _M = None, float('-inf')
 
 		for account_id, account in accounts.items():
@@ -86,7 +107,7 @@ def prime_allocator(
 			# contract must be fufilled
 			if constraints_satisfied(_account, constraints):
 				M = metric_summ(_account, account.metrics)
-				print('Σ: ', M) # optimize for larger score currently, need to expand scenario
+				# print('Σ: ', M) # optimize for larger score currently, need to expand scenario
 				if M > _M:
 					_M = M
 					alloc_id = account_id
@@ -98,17 +119,13 @@ def prime_allocator(
 		else:
 			raise ValueError(f"Unable to allocate: {trade}")
 
-	if allocation_log:
-		for allocation in allocation_log:
-			print(f'Trade: {allocation[0]} was allocated to {allocation[1]}')
-	else:
-		print('No trades were allocated')
-
+	final_metrics = {account_id: calc_all_metrics(account) for account_id, account in accounts.items()}
+	return allocation_log, accounts, final_metrics
 
 		
 trades = [
 	Trade('buy', 'AAPL', 'corporate', 'USD', 100, 150, 0),
-	Trade('sell', 'GOOGL', 'corporate', 'USD', 50, 2000, 0)
+	Trade('sell', 'GOOG', 'corporate', 'USD', 50, 2000, 0)
 ]
 
 
@@ -117,23 +134,50 @@ accounts = {
 		'Account1',
 		{'AAPL': 1000},
 		{'USD': 1000000},
-		{'total_value': 1, 'position_count': -0.1, 'cash_percentage': -0.05},
-		{'AAPL': 150}
+		{
+			'total_value': 1.0,
+			'position_count': -0.1,
+			'cash_percentage': 0.5,
+			'leverage': -0.5,
+			'financing_cost': -1.0
+		},
+		{'AAPL': 150},
+		0.056
 	),
 	'Account2': Account(
 		'Account2',
-		{'GOOGL': 500},
+		{'GOOG': 500},
 		{'USD': 2000000},
-		{'total_value': 1, 'position_count': -0.1, 'cash_percentage': -0.05},
-		{'GOOGL': 150}
+		{
+			'total_value': 1.0,
+			'position_count': -0.1,
+			'cash_percentage': 0.5,
+			'leverage': -0.5,
+			'financing_cost': -1.0
+		},
+		{'GOOG': 150},
+		0.032
 	)
 }
 
 constraints = {
-	'total_value': (500000, 'greater_than_or_equal'), 
+	'total_value': (500000, 'greater_than_or_equal'),
+	'leverage': (2, 'less_than_or_equal'),
 	'cash_percentage': (10, 'greater_than_or_equal')
 }
 
-prime_allocator(trades, accounts, constraints)
+allocation_log, updated, metrics = prime_allocator(trades, accounts, constraints)
+
+
+print("Trade Allocations:")
+for trade, alloc_id in allocation_log:
+    print(f"Allocated {trade.side} {trade.quantity} {trade.security_name} to {alloc_id}")
+
+print("\nFinal Account States and Metrics:")
+for account_id, account in updated.items():
+    print(f"{account_id}:")
+    print(f"  Positions: {account.positions}")
+    print(f"  Cash: {account.cash}")
+    print(f"  Metrics: {metrics[account_id]}")
 
 	
