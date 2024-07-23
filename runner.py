@@ -64,6 +64,17 @@ def calc_metric(account: Account, metric_name: str) -> float:
 			max(0, quantity) * account.prices[pos] * account.financing_rate
 			for pos, quantity in account.positions.items())
 
+	elif metric_name == 'gov_bond_percentage':
+		gov_bond_value = sum(quantity * account.prices[pos] for pos, quantity in account.positions.items() if 'GOV' in pos)
+		total_value = calc_metric(account, 'total_value')
+		return (gov_bond_value / total_value) * 100 if total_value else 0
+
+	elif metric_name == 'currency_exposure':
+		# percent of non usd
+		usd_value = account.cash.get('USD', 0) + sum(quantity * account.prices[pos] for pos, quantity in account.positions.items() if not pos.endswith('CAD'))
+		total_value = calc_metric(account, 'total_value')
+		return ((total_value - usd_value) / total_value) * 100 if total_value else 0
+
 	return 0
 
 
@@ -73,7 +84,9 @@ def calc_all_metrics(account: Account) -> Dict[str, float]:
 		'position_count': calc_metric(account, 'position_count'),
 		'cash_percentage': calc_metric(account, 'cash_percentage'),
 		'leverage': calc_metric(account, 'leverage'),
-		'financing_cost': calc_metric(account, 'financing_cost')
+		'financing_cost': calc_metric(account, 'financing_cost'),
+		'gov_bond_percentage': calc_metric(account, 'gov_bond_percentage'),
+		'currency_exposure': calc_metric(account, 'currency_exposure')
 	} 
 
 def constraints_satisfied(account: Account, constraints: Dict[str, Tuple[float, str]]) -> bool:
@@ -125,45 +138,54 @@ def prime_allocator(
 		
 trades = [
 	Trade('buy', 'AAPL', 'corporate', 'USD', 100, 150, 0),
-	Trade('sell', 'GOOG', 'corporate', 'USD', 50, 2000, 0)
+	Trade('sell', 'GOOG', 'corporate', 'USD', 50, 2000, 0),
+	Trade('buy', 'US_GOV_10Y', 'government', 'USD', 100000, 98.5, 500),
+	Trade('sell', 'RY.TO', 'corporate', 'CAD', 1000, 100, 0),
+	Trade('buy', 'CA_GOV_5Y', 'government', 'CAD', 150000, 99, 300)
 ]
 
 
 accounts = {
 	'Account1': Account(
 		'Account1',
-		{'AAPL': 1000},
-		{'USD': 1000000},
+		{'AAPL': 1000, 'US_GOV_5Y': 100000, 'RY.TO': 2000},
+		{'USD': 2000000, 'CAD': 15000000},
 		{
 			'total_value': 1.0,
 			'position_count': -0.1,
 			'cash_percentage': 0.5,
 			'leverage': -0.5,
-			'financing_cost': -1.0
+			'financing_cost': -1.0,
+			'gov_bond_percentage': 0.3,
+			'currency_exposure': -0.2
 		},
-		{'AAPL': 150},
+		{'AAPL': 150, 'US_GOV_5Y': 97.5, 'RY.TO': 95, 'US_GOV_10Y': 98.5},
 		0.056
 	),
 	'Account2': Account(
 		'Account2',
-		{'GOOG': 500},
-		{'USD': 2000000},
+		{'GOOG': 500, 'CA_GOV_10Y': 200000, 'TD.TO': 1500},
+		{'USD': 2000000, 'CAD': 16000000},
 		{
 			'total_value': 1.0,
 			'position_count': -0.1,
 			'cash_percentage': 0.5,
 			'leverage': -0.5,
-			'financing_cost': -1.0
+			'financing_cost': -1.0,
+			'gov_bond_percentage': 0.3,
+			'currency_exposure': 0.2
 		},
-		{'GOOG': 150},
+		{'GOOG': 2000, 'CA_GOV_10Y': 98, 'TD.TO': 80, 'CA_GOV_5Y': 99},
 		0.032
 	)
 }
 
 constraints = {
-	'total_value': (500000, 'greater_than_or_equal'),
-	'leverage': (2, 'less_than_or_equal'),
-	'cash_percentage': (10, 'greater_than_or_equal')
+	'total_value': (100000, 'greater_than_or_equal'),
+	'leverage': (3, 'less_than_or_equal'),
+	'cash_percentage': (5, 'greater_than_or_equal'),
+	'gov_bond_percentage': (15, 'greater_than_or_equal'),
+	'currency_exposure': (60, 'less_than_or_equal')
 }
 
 allocation_log, updated, metrics = prime_allocator(trades, accounts, constraints)
@@ -171,13 +193,13 @@ allocation_log, updated, metrics = prime_allocator(trades, accounts, constraints
 
 print("Trade Allocations:")
 for trade, alloc_id in allocation_log:
-    print(f"Allocated {trade.side} {trade.quantity} {trade.security_name} to {alloc_id}")
+	print(f"Allocated {trade.side} {trade.quantity} {trade.security_name} to {alloc_id}")
 
 print("\nFinal Account States and Metrics:")
 for account_id, account in updated.items():
-    print(f"{account_id}:")
-    print(f"  Positions: {account.positions}")
-    print(f"  Cash: {account.cash}")
-    print(f"  Metrics: {metrics[account_id]}")
+	print(f"{account_id}:")
+	print(f"  Positions: {account.positions}")
+	print(f"  Cash: {account.cash}")
+	print(f"  Metrics: {metrics[account_id]}")
 
 	
