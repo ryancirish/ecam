@@ -13,6 +13,12 @@ app = Flask(__name__)
 def healthcheck():
 	return {"msg": "hello world"}, 200
 
+
+@app.route("/lab")
+def index():
+    return send_from_directory("lab", "index.html")
+
+
 @app.route('/allocate_trades', methods=['POST'])
 def allocate_trades():
 	data = request.json
