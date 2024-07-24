@@ -1,7 +1,64 @@
-<script src="https://unpkg.com/petite-vue" defer init></script>
+<link rel="stylesheet" href="https://unpkg.com/tachyons@4.12.0/css/tachyons.min.css"/>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="module">
+  import { createApp } from 'https://unpkg.com/petite-vue?module'
 
-<!-- anywhere on the page -->
-<div v-scope="{ count: 0 }">
-  {{ count }}
-  <button @click="count++">inc</button>
+  createApp({
+    // exposed to all expressions
+  	analytics: false,
+  	working: false,
+  	healthcheck: false,
+    count: 0,
+    // getters
+    // get plusOne() {
+    //   return this.count + 1
+    // },
+    // methods
+    increment() {
+      this.count++
+    },
+
+    testAlloc() {
+      axios
+	  .get('https://ecam-ruby.vercel.app/')
+	  .then(response => (this.analytics = response.data))
+    }
+  }).mount()
+</script>
+
+<!-- v-scope value can be omitted -->
+<div class="helvetica">
+
+  <div class="w-100 flex flex-wrap justify-between">
+  	<h1 class="helvetica f1">ECAM Assesment Lab</h1>
+
+	<div class="w-25 pa3 mr2 tc pt4 pointer">
+	  <a class="f1 hover-gold">about</a>
+	</div>
+	<div class="w-25 pa3 mr2 tc pt4 pointer">
+	  <a class="f1 hover-gold">log</a>
+	</div>
+  </div>
+
+  <div class="w-100">
+  	<h2 class="f2 tc">Prime Brokerage Allocation</h2>
+  	<div class="tc">
+  		<a class="f4 link dim br3 ba bw1 ph3 pv2 mb2 dib black grow" @click="testAlloc">Run Test Scenario</a>
+  	</div>
+  </div>
+
+  <div class="w-80 h-100 bg-near-white center">
+  	<div v-if="analytics">
+  		<h1>here!</h1>
+
+  	</div>
+  	<div v-else>
+  		<p class="tc pt4">
+  			<code> there are no portfolio analytics available...</code>
+  		</p>
+  	</div>
+  </div>
+
+
+  
 </div>
