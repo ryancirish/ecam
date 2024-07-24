@@ -1,6 +1,4 @@
 # from test of formula
-import sys
-sys.path.append('../')
 from helper import Account, Trade
 from helper import model_trade, metric_summ, calc_metric, calc_all_metrics, constraints_satisfied, prime_allocator
 
@@ -55,8 +53,5 @@ if __name__ == '__main__':
 	# test suite
 
 # need testset
-
-
-
 
 
