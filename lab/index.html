@@ -9,6 +9,9 @@
   	working: false,
   	healthcheck: false,
     count: 0,
+    accounts: false,
+    metrics: false,
+    log: false,
     // getters
     // get plusOne() {
     //   return this.count + 1
@@ -98,7 +101,13 @@
 	  	}
 
 	  )
-	  .then(response => (this.analytics = response.data))
+	  .then(response => {
+	  	let d = response.data
+	  	this.analytics = d
+	  	this.metrics = d['final_metrics']
+	  	this.accounts = d['final_account_states']
+	  	this.log = d['allocations']
+	  })
     }
   }).mount()
 </script>
@@ -124,18 +133,45 @@
   	</div>
   </div>
 
+  <div class="w-60 ph3 center" v-if="accounts">
+  	<div v-for="account in accounts">
+  		<h2> {{ account.id }} </h2>
+  		<p> - - - - - - - - - -</p>
+  		<h3>Positions</h3>
+  		<p>{{ account.positions }}</p>
+  		<h3>Prices</h3>
+  		<p>{{ account.prices }}</p>
+  		<h3>Optimization Priorities</h3>
+  		<p>{{ account.metrics }}</p>
+  		<h3>Financing Rate</h3>
+  		<p>{{ account.financing_rate }}</p>
+  	</div>
+  	
+  </div>
+
+  <div class="tc helvetica" v-else>
+  	<p>No account data. Run a scenario</p>
+  </div>
+
   <div class="w-80 h-100 bg-near-white center">
-  	<div v-if="analytics">
-  		<p class="ph3">
+  	<div v-if="log">
+  		<p class="ph3" v-for="log in log">
 	  		<code>
-	  			{{ analytics }}
+	  			Allocated to: {{ log[1] }}
+	  			<br/>
+	  			Trade: {{ log[0] }}
 	  		</code>
   		</p>
+
+  		<p v-for="(metric, key) in metrics">
+  			<code>{{ key }}:{{ metric }}</code>	
+  		</p>
+  		
 
   	</div>
   	<div v-else>
   		<p class="tc pt4">
-  			<code> there are no portfolio analytics available...</code>
+  			<code> there are no portfolio allocations available...</code>
   		</p>
   	</div>
   </div>
