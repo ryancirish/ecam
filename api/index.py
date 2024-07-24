@@ -1,6 +1,6 @@
 # from test of formula
-from helper import Account, Trade
-from helper import model_trade, metric_summ, calc_metric, calc_all_metrics, constraints_satisfied, prime_allocator
+from api.helper import Account, Trade
+from api.helper import model_trade, metric_summ, calc_metric, calc_all_metrics, constraints_satisfied, prime_allocator
 
 from flask import Flask, request, jsonify
 from dataclasses import dataclass, asdict
