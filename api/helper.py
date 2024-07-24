@@ -188,18 +188,3 @@ constraints = {
 	'currency_exposure': (60, 'less_than_or_equal')
 }
 
-# allocation_log, updated, metrics = prime_allocator(trades, accounts, constraints)
-
-
-# print("Trade Allocations:")
-# for trade, alloc_id in allocation_log:
-# 	print(f"Allocated {trade.side} {trade.quantity} {trade.security_name} to {alloc_id}")
-
-# print("\nFinal Account States and Metrics:")
-# for account_id, account in updated.items():
-# 	print(f"{account_id}:")
-# 	print(f"  Positions: {account.positions}")
-# 	print(f"  Cash: {account.cash}")
-# 	print(f"  Metrics: {metrics[account_id]}")
-
-	
