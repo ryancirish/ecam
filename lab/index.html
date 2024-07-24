@@ -20,7 +20,84 @@
 
     testAlloc() {
       axios
-	  .get('https://ecam-ruby.vercel.app/')
+	  .post(
+	  	'https://ecam-ruby.vercel.app/allocate_trades',
+	  	{
+	  		
+	  		  "trades": [
+	  		    {
+	  		      "side": "buy",
+	  		      "security_name": "AAPL",
+	  		      "security_type": "corporate",
+	  		      "currency": "USD",
+	  		      "quantity": 100,
+	  		      "price": 150,
+	  		      "accrued_interest": 0
+	  		    },
+	  		    {
+	  		      "side": "buy",
+	  		      "security_name": "US_GOV_10Y",
+	  		      "security_type": "government",
+	  		      "currency": "USD",
+	  		      "quantity": 100000,
+	  		      "price": 98.5,
+	  		      "accrued_interest": 500
+	  		    },
+	  		    {
+	  		      "side": "sell",
+	  		      "security_name": "RY.TO",
+	  		      "security_type": "corporate",
+	  		      "currency": "CAD",
+	  		      "quantity": 1000,
+	  		      "price": 100,
+	  		      "accrued_interest": 0
+	  		    }
+	  		  ],
+	  		  "accounts": {
+	  		    "Account1": {
+	  		      "id": "Account1",
+	  		      "positions": {"AAPL": 1000, "US_GOV_5Y": 100000, "RY.TO": 2000},
+	  		      "cash": {"USD": 2000000, "CAD": 15000000},
+	  		      "metrics": {
+	  		        "total_value": 1.0,
+	  		        "position_count": -0.1,
+	  		        "cash_percentage": 0.5,
+	  		        "leverage": -0.5,
+	  		        "financing_cost": -1.0,
+	  		        "gov_bond_percentage": 0.3,
+	  		        "currency_exposure": -0.2
+	  		      },
+	  		      "prices": {"AAPL": 150, "US_GOV_5Y": 97.5, "RY.TO": 95, "US_GOV_10Y": 98.5},
+	  		      "financing_rate": 0.056
+	  		    },
+	  		    "Account2": {
+	  		      "id": "Account2",
+	  		      "positions": {"GOOG": 500, "CA_GOV_10Y": 200000, "TD.TO": 1500},
+	  		      "cash": {"USD": 2000000, "CAD": 16000000},
+	  		      "metrics": {
+	  		        "total_value": 1.0,
+	  		        "position_count": -0.1,
+	  		        "cash_percentage": 0.5,
+	  		        "leverage": -0.5,
+	  		        "financing_cost": -1.0,
+	  		        "gov_bond_percentage": 0.3,
+	  		        "currency_exposure": 0.2
+	  		      },
+	  		      "prices": {"GOOG": 2000, "CA_GOV_10Y": 98, "TD.TO": 80, "CA_GOV_5Y": 99},
+	  		      "financing_rate": 0.032
+	  		    }
+	  		  },
+	  		  "constraints": {
+	  		    "total_value": [100000, "greater_than_or_equal"],
+	  		    "leverage": [3, "less_than_or_equal"],
+	  		    "cash_percentage": [5, "greater_than_or_equal"],
+	  		    "gov_bond_percentage": [15, "greater_than_or_equal"],
+	  		    "currency_exposure": [60, "less_than_or_equal"]
+	  		  }
+
+	  	}
+
+	  )
 	  .then(response => (this.analytics = response.data))
     }
   }).mount()
@@ -49,7 +126,11 @@
 
   <div class="w-80 h-100 bg-near-white center">
   	<div v-if="analytics">
-  		{{ analytics }}
+  		<p class="ph3">
+	  		<code>
+	  			{{ analytics }}
+	  		</code>
+  		</p>
 
   	</div>
   	<div v-else>
